@@ -1,0 +1,212 @@
+default:
+  app:
+    enabled: true
+    enableAutoSync: true
+    autoSyncPrune: false
+    project: cluster-config
+    labels:
+      app-source: group-all
+      repo: cluster-config
+    destination:
+      namespace: openshift-gitops
+      server: https://kubernetes.default.svc
+    source:
+      repoURL: https://github.com/redhat-cop/gitops-catalog.git
+      targetRevision: HEAD
+    syncOptions:
+    - ApplyOutOfSyncOnly=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    - ServerSideApply=true  
+    - FailOnSharedResource=true
+    - RespectIgnoreDifferences=true
+    - CreateNamespace=false      
+
+projects:
+
+  cluster-config:
+    annotations:
+      notifications.argoproj.io/subscribe.on-sync-failed.slack: cluster-gitops
+      notifications.argoproj.io/subscribe.on-health-degraded.slack: cluster-gitops
+    description: Project for overall cluster configuration
+    namespace: openshift-gitops
+    sourceRepos:
+    - '*'
+    destinations: |
+      - namespace: '*'
+        server: https://kubernetes.default.svc
+    extraFields: |
+      clusterResourceWhitelist:
+      - group: '*'
+        kind: '*'
+
+applications:
+
+  cert-manager-operator:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '5'
+    destination:
+      namespace: cert-manager
+    source:
+      path: openshift-cert-manager-operator/operator/overlays/stable-v1
+
+  config-alertmanager:
+    labels:
+      label: overwrite-test
+      newLabelTest: new-label-test
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '11'
+    destination:
+      namespace: openshift-monitoring
+    source:
+      path: galertmanager/base
+
+  config-authentication:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '4'
+    destination:
+      namespace: openshift-config
+    source:
+      path: goauth/overlays/google-with-matrix
+
+  config-camel-k-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: "21"
+    destination:
+      namespace: openshift-operators
+    source:
+      path: gcamel-k-operator/base
+
+  config-cert-manager-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: "2"
+    destination:
+      namespace: openshift-cert-manager-operator
+    source:
+      path: gcert-manager-operator/overlays/letsencrypt
+
+  config-compliance-operator:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '21'
+    destination:
+      namespace: openshift-compliance
+    source:
+      path: compliance-operator/aggregate/scheduled
+
+  config-console-links:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '11'
+    source:
+      path: gconsolelinks/base
+
+  config-container-security:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '21'
+    destination:
+      namespace: openshift-operators
+    source:
+      path: container-security-operator/overlays/stable-3.6
+
+  config-cost-management:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '21'
+    source:
+      path: clusters/home/apps/cost-management-operator/overlays/default
+
+  config-dev-tools:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '31'
+    destination:
+      namespace: dev-tools
+    source:
+      path: gdev-tools/overlays/default
+
+  config-groups-and-membership:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '11'
+    source:
+      path: ggroups-and-membership/overlays/default
+
+  config-helm-repos:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '11'
+    source:
+      path: ghelm-repos/base
+
+  config-kyverno:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '21'
+    destination:
+      namespace: kyverno
+    source:
+      path: gkyverno/overlays/policies
+    syncPolicyRetry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - Replace=true
+    extraFields: |
+      ignoreDifferences:
+        - group: kyverno.io
+          kind: ClusterPolicy
+          jsonPointers:
+          - /spec/rules
+        - group: kyverno.io
+          kind: Policy
+          jsonPointers:
+          - /spec/rules
+
+  config-pipeline-operator:
+    annotations:
+      argocd.argoproj.io/sync-wave: "21"
+    destination:
+      namespace: openshift-operators
+    source:
+      path: gpipelines-operator/overlays/patch-config-parameters
+
+  config-sso:
+    enabled: false
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '21'
+    destination:
+      namespace: sso
+    source:
+      path: gsso/overlays/default
+
+  config-sealed-secrets:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '1'
+    destination:
+      namespace: sealed-secrets
+    source:
+      path: gsealed-secrets-operator/overlays/default
+
+  tekton-cluster-tasks:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '41'
+    source:
+      path: gtekton-cluster-tasks/base
+
+  tenant-product-catalog:
+    annotations:
+      argocd.argoproj.io/compare-options: IgnoreExtraneous
+      argocd.argoproj.io/sync-wave: '51'
+    source:
+      path: tenants/product-catalog/argocd/applicationset/base
