@@ -50,3 +50,11 @@ applications:
       namespace: cert-manager
     source:
       path: openshift-cert-manager-operator/operator/overlays/stable-v1
+
+  advanced-cluster-management:
+    source:
+      path: advanced-cluster-management/operator/overlays/release-2.12
+
+  rhsso-operator:
+    source:
+      path: rhsso/operator/overlays/stable
